@@ -1,17 +1,22 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import userRoutes from "./routes/userRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import { connectDB } from "./config/db.js";
+import { errorMiddleware } from "./middlewares/errorMiddleware.js";
+import cookieParser from "cookie-parser";
+import { logMiddleware } from "./middlewares/logMiddleware.js";
+import logger from "./utils/logger.js";
 
 const app = express();
-
+app.use(logMiddleware);
 app.use(express.json());
-
-app.use((req, res, next) => {
-  req.myName = "nimsbro";
-  next();
-});
-
+app.use(cookieParser());
+connectDB();
 app.use("/user", userRoutes);
-
+app.use("/api", authRoutes);
+app.use(errorMiddleware);
 // app.get("/people", (req, res) => {
 //   res.send(req.myName);
 // });
@@ -44,7 +49,10 @@ app.use("/user", userRoutes);
 // });
 
 // app.use("/user", userRoutes);
-
-app.listen(3000, () => {
-  console.log("server running on port 3000");
+app.listen(process.env.PORT || 3000, () => {
+  // console.log("server running on port 3000");
+  logger.info({
+    port: process.env.PORT || 3000,
+    env: process.env.NODE_ENV,
+  }, "Server started successfully");
 });
