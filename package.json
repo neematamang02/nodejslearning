@@ -20,8 +20,10 @@
     "jsonwebtoken": "^9.0.3",
     "lodash": "^4.17.23",
     "mongoose": "^9.1.5",
+    "nodemailer": "^8.0.4",
     "pino": "^10.3.0",
     "pino-http": "^11.0.0",
+    "redis": "^5.11.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

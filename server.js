@@ -8,6 +8,7 @@ import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 import cookieParser from "cookie-parser";
 import { logMiddleware } from "./middlewares/logMiddleware.js";
 import logger from "./utils/logger.js";
+import { connectRedis } from "./config/redis.js";
 
 const app = express();
 app.use(logMiddleware);
@@ -49,6 +50,7 @@ app.use(errorMiddleware);
 // });
 
 // app.use("/user", userRoutes);
+await connectRedis();
 app.listen(process.env.PORT || 3000, () => {
   // console.log("server running on port 3000");
   logger.info({

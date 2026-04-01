@@ -1,7 +1,7 @@
 import asyncHandler from "../middlewares/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
-import { registerService, loginService } from "../services/authService.js";
+import { registerService, loginService, otpverifyservice } from "../services/authService.js";
 import { sendResponse } from "../utils/sendResponse.js";
 import ApiError from "../utils/ApiError.js";
 
@@ -14,6 +14,14 @@ export const register = asyncHandler(async (req, res) => {
         data: { user }
     })
 });
+export const verifyOtp = asyncHandler(async (req, res) => {
+    const user = await otpverifyservice(req.body.email, req.body.otp)
+    sendResponse(res, {
+        statusCode: 200,
+        message: "OTP verified successfully",
+        data: { user }
+    });
+})
 export const loginUser = asyncHandler(async (req, res) => {
     const user = await loginService(req.body.email, req.body.password);
     const accessToken = generateAccessToken(user._id);

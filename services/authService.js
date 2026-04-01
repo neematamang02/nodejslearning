@@ -3,6 +3,50 @@ import { Createuser, deleteuser, finduserbyemail, finduserbyId, listuser, update
 import ApiError from "../utils/ApiError.js";
 import { APIFeatures } from "../utils/apiFeatures.js";
 import logger from "../utils/logger.js";
+import redisClient from "../config/redis.js";
+import sendEmail from "./emailService.js";
+import bcrypt from "bcryptjs";
+
+
+export const saveOtp = async (email, otp) => {
+    const hashOtp = await bcrypt.hash(otp.toString(), 10);
+  await redisClient.setEx(`otp:${email}`, 300, hashOtp); // 5 min expiry
+};
+
+export const savePendingRegistration = async (email, userData) => {
+    // Store user data with 5 min expiry (same as OTP)
+    await redisClient.setEx(`registration:${email}`, 300, JSON.stringify(userData));
+};
+
+export const getPendingRegistration = async (email) => {
+    const data = await redisClient.get(`registration:${email}`);
+    if (!data) {
+        return null;
+    }
+    return JSON.parse(data);
+};
+
+export const deletePendingRegistration = async (email) => {
+    await redisClient.del(`registration:${email}`);
+};
+
+export const verifyOtp = async (email, otp) => {
+  const storedhashedOtp = await redisClient.get(`otp:${email}`);
+
+  if (!storedhashedOtp) {
+    throw new Error("OTP expired or not found");
+  }
+  const isMatch = await bcrypt.compare(otp.toString(), storedhashedOtp);
+    if (!isMatch) {
+    throw new Error("Invalid OTP");
+  }
+
+  // delete after success
+  await redisClient.del(`otp:${email}`);
+
+  return true;
+};
+
 
 
 export const registerService = async (userdata) => {
@@ -11,9 +55,46 @@ export const registerService = async (userdata) => {
         logger.warn({ email: userdata.email }, "Registration attempt with existing email");
         throw new ApiError("User already exists",409, "User_already_exists");
     }
-    const newuser = await Createuser(userdata);
-    logger.info({ userId: newuser._id, email: newuser.email }, "New user registered");
-    return newuser;
+    const generateOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store user data in Redis temporarily
+    await savePendingRegistration(userdata.email, {
+        name: userdata.name,
+        password: userdata.password
+    });
+    
+    await saveOtp(userdata.email, generateOtp);
+    await sendEmail(userdata.email, "Your OTP code", `Your otp code is ${generateOtp}. Expires in 5 minutes`);
+
+    logger.info({ email: userdata.email }, "OTP sent successfully");
+    return { message: "OTP sent successfully" };
+}
+
+export const otpverifyservice = async (email, otp) => {
+     const isValid = await verifyOtp(email, otp);
+     if (!isValid) {
+        logger.warn({ email }, "Failed OTP verification");
+        throw new ApiError("Invalid OTP",401, "Invalid_OTP");
+    }
+    
+    // Get pending registration data from Redis
+    const pendingData = await getPendingRegistration(email);
+    if (!pendingData) {
+        throw new ApiError("Registration session expired or not found", 400, "REGISTRATION_EXPIRED");
+    }
+    
+    // Create user with all required fields
+    const newUser = await Createuser({
+        name: pendingData.name,
+        email: pendingData.email,
+        password: pendingData.password
+    });
+    
+    // Clean up pending data from Redis
+    await deletePendingRegistration(email);
+    
+    logger.info({ userId: newUser._id, email }, "User registered successfully");
+    return newUser;
 }
 const authLogger = logger.child({ module: 'auth' });
 
@@ -21,10 +102,10 @@ export const loginService = async (email, password) => {
     authLogger.debug({ email }, "Login attempt");
     const user = await finduserbyemail(email);
     if (!user || !(await user.matchPassword(password))) {
-        logger.warn({ email }, "Failed login attempt");
+        authLogger.warn({ email }, "Failed login attempt");
         throw new ApiError("Invalid crentials",401, "Invalid_credentials");
     }
-    logger.info({ userId: user._id, email }, "User logged in successfully");
+    authLogger.info({ userId: user._id, email }, "User logged in successfully");
     return user;
 };
 
