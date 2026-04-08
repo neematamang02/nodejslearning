@@ -9,16 +9,25 @@ import bcrypt from "bcryptjs";
 
 
 export const saveOtp = async (email, otp) => {
+    // Store OTP with user data in a single Redis key for efficiency
     const hashOtp = await bcrypt.hash(otp.toString(), 10);
-  await redisClient.setEx(`otp:${email}`, 300, hashOtp); // 5 min expiry
+    await redisClient.setEx(`registration:${email}`, 300, JSON.stringify({
+        otp: hashOtp,
+        userData: { email } // Store email explicitly for clarity
+    }));
 };
 
-export const savePendingRegistration = async (email, userData) => {
-    // Store user data with 5 min expiry (same as OTP)
-    await redisClient.setEx(`registration:${email}`, 300, JSON.stringify(userData));
+// Separate function to store user data alongside OTP
+export const saveRegistrationData = async (email, userData) => {
+    const existing = await redisClient.get(`registration:${email}`);
+    if (existing) {
+        const parsed = JSON.parse(existing);
+        parsed.userData = userData;
+        await redisClient.setEx(`registration:${email}`, 300, JSON.stringify(parsed));
+    }
 };
 
-export const getPendingRegistration = async (email) => {
+export const getRegistrationData = async (email) => {
     const data = await redisClient.get(`registration:${email}`);
     if (!data) {
         return null;
@@ -26,23 +35,24 @@ export const getPendingRegistration = async (email) => {
     return JSON.parse(data);
 };
 
-export const deletePendingRegistration = async (email) => {
+export const deleteRegistrationData = async (email) => {
     await redisClient.del(`registration:${email}`);
 };
 
 export const verifyOtp = async (email, otp) => {
-  const storedhashedOtp = await redisClient.get(`otp:${email}`);
+  const registrationData = await redisClient.get(`registration:${email}`);
 
-  if (!storedhashedOtp) {
+  if (!registrationData) {
     throw new Error("OTP expired or not found");
   }
+  
+  const parsed = JSON.parse(registrationData);
+  const storedhashedOtp = parsed.otp;
+  
   const isMatch = await bcrypt.compare(otp.toString(), storedhashedOtp);
     if (!isMatch) {
     throw new Error("Invalid OTP");
   }
-
-  // delete after success
-  await redisClient.del(`otp:${email}`);
 
   return true;
 };
@@ -57,13 +67,13 @@ export const registerService = async (userdata) => {
     }
     const generateOtp = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Store user data in Redis temporarily
-    await savePendingRegistration(userdata.email, {
+    // Store OTP and user data together in one Redis key
+    await saveOtp(userdata.email, generateOtp);
+    await saveRegistrationData(userdata.email, {
         name: userdata.name,
         password: userdata.password
     });
     
-    await saveOtp(userdata.email, generateOtp);
     await sendEmail(userdata.email, "Your OTP code", `Your otp code is ${generateOtp}. Expires in 5 minutes`);
 
     logger.info({ email: userdata.email }, "OTP sent successfully");
@@ -77,21 +87,23 @@ export const otpverifyservice = async (email, otp) => {
         throw new ApiError("Invalid OTP",401, "Invalid_OTP");
     }
     
-    // Get pending registration data from Redis
-    const pendingData = await getPendingRegistration(email);
-    if (!pendingData) {
+    // Get registration data from Redis (contains userData)
+    const registrationData = await getRegistrationData(email);
+    if (!registrationData || !registrationData.userData) {
         throw new ApiError("Registration session expired or not found", 400, "REGISTRATION_EXPIRED");
     }
     
-    // Create user with all required fields
+    const { name, password } = registrationData.userData;
+    
+    // Create user
     const newUser = await Createuser({
-        name: pendingData.name,
-        email: pendingData.email,
-        password: pendingData.password
+        name,
+        email,
+        password
     });
     
-    // Clean up pending data from Redis
-    await deletePendingRegistration(email);
+    // Clean up Redis
+    await deleteRegistrationData(email);
     
     logger.info({ userId: newUser._id, email }, "User registered successfully");
     return newUser;
