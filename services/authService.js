@@ -6,6 +6,7 @@ import logger from "../utils/logger.js";
 import redisClient from "../config/redis.js";
 import sendEmail from "./emailService.js";
 import bcrypt from "bcryptjs";
+import { id } from "zod/locales";
 
 
 export const saveOtp = async (email, otp) => {
@@ -161,4 +162,13 @@ export const deleteuserservice = async (id) => {
         throw new ApiError("User not found",404, "User_not_found");
     }
     await deleteuser(id);
+}
+
+export const logoutservice = async (id) => {
+    const user = await finduserbyId(id);
+    if (!user) {
+        throw new ApiError("User not found",404, "User_not_found");
+    }
+    user.tokenVersion += 1;
+    await user.save();
 }

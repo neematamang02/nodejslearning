@@ -1,7 +1,7 @@
 import asyncHandler from "../middlewares/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
-import { registerService, loginService, otpverifyservice } from "../services/authService.js";
+import { registerService, loginService, otpverifyservice, logoutservice } from "../services/authService.js";
 import { sendResponse } from "../utils/sendResponse.js";
 import ApiError from "../utils/ApiError.js";
 import config from "../config/index.js";
@@ -73,11 +73,22 @@ export const refreshToken = asyncHandler(async (req, res) => {
     })
 });
 
-export const Logoutuser = (_req, res) => {
+export const Logoutuser = asyncHandler(async(req, res) => {
     res.clearCookie("refreshToken", { httpOnly: true, sameSite: "Strict" });
     // sendResponse(res, 200, "Logged out successfully");
     sendResponse(res, {
         statusCode: 200,
         message: "Logged out successfully",
     })
-};
+});
+
+
+export const logoutAll = asyncHandler(async (req, res) => {
+    await logoutservice(req.user._id);
+    res.clearCookie("refreshToken", { httpOnly: true, sameSite: "Strict" });
+    // sendResponse(res, 200, "Logged out from all devices successfully");
+    sendResponse(res, {
+        statusCode: 200,
+        message: "Logged out from all devices successfully",
+    })
+});

@@ -20,6 +20,10 @@ export const protect = asyncHandler(async (req, res, next) => {
             res.status(401);
             throw new Error("User not found")
         }
+        if (decoded.tokenVersion !== req.user.tokenVersion) {
+            res.status(401);
+            throw new Error("Token expired or invalid");
+        }
         next();
     } catch (error) {
         res.status(401);
