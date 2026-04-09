@@ -4,6 +4,7 @@ import { generateAccessToken, generateRefreshToken } from "../utils/generateToke
 import { registerService, loginService, otpverifyservice } from "../services/authService.js";
 import { sendResponse } from "../utils/sendResponse.js";
 import ApiError from "../utils/ApiError.js";
+import config from "../config/index.js";
 
 export const register = asyncHandler(async (req, res) => {
     const user = await registerService(req.body);
@@ -29,7 +30,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: config.app.isProduction,
         sameSite: "Strict",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -62,7 +63,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Refresh token not found", "REFRESH_TOKEN_MISSING");
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(token, config.auth.jwtRefreshSecret);
     const accessToken = generateAccessToken(decoded.id);
     // sendResponse(res, 200, "Token refreshed successfully", { accessToken });
     sendResponse(res, {

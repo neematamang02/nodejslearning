@@ -1,5 +1,6 @@
 import logger from "../utils/logger.js";
 import { sendResponse } from "../utils/sendResponse.js";
+import config from "../config/index.js";
 
 export const errorMiddleware = (err, req, res, _next) => {
     const statusCode = err.statusCode || 500;
@@ -13,7 +14,7 @@ export const errorMiddleware = (err, req, res, _next) => {
     //         code: err.code || "SERVER_ERROR",
     //         statusCode,
     //         ...(err.details && { details: err.details }),
-    //         ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+    //         ...(!config.app.isProduction && { stack: err.stack }),
     //     },
     //     meta: {
     //         timestamp: new Date().toISOString(),
@@ -38,7 +39,7 @@ export const errorMiddleware = (err, req, res, _next) => {
             code: err.code || "SERVER_ERROR",
             statusCode,
             details: err.details || null,
-            ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+            ...(!config.app.isProduction && { stack: err.stack }),
         },
     });
 };

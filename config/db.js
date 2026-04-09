@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
+import config from "./index.js";
 
 export const connectDB = async () => {
     // const uri = "mongodb+srv://nimsdtmg_db_user:NWoCpHAP1jqkoZsJ@learningcluster.34hhusg.mongodb.net/?appName=learningcluster";
     try {
-        await mongoose.connect(process.env.MONGO_URI);
+        await mongoose.connect(config.database.mongoUri);
         // console.log("mongodb connected successfully");
         logger.info({
             database: 'mongodb',
@@ -16,7 +17,7 @@ export const connectDB = async () => {
         process.exit(1);
     }
 };
-if (process.env.NODE_ENV !== "production") {
+if (!config.app.isProduction) {
     mongoose.set('debug', (collectionName, method, query, doc) => {
         logger.debug({
             collection: collectionName,

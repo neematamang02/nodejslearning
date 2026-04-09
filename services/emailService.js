@@ -1,9 +1,10 @@
 import getTransporter from "../config/mailer.js";
+import config from "../config/index.js";
 
 const sendEmail = async (to, subject, text) => {
     const transporter = getTransporter();
     const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: config.email.user,
         to,
         subject,
         text

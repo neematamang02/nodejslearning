@@ -1,17 +1,18 @@
 import { pino } from "pino";
+import config from "../config/index.js";
 
 const logger = pino({
-    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
+    level: config.logging.level || (config.app.isProduction ? "info" : "debug"),
     base: {
-        env: process.env.NODE_ENV,
-        revision: process.env.GIT_COMMIT || undefined
+        env: config.app.env,
+        revision: config.logging.revision || undefined
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     redact: {
         paths: ['req.headers.authorization', 'req.headers.cookie', 'password', 'token', 'accessToken', 'refreshToken'],
         censor: '[REDACTED]'
     },
-    transport: process.env.NODE_ENV !== "production" ? {
+    transport: !config.app.isProduction ? {
         target: "pino-pretty",
         options: { colorize: true, translateTime: 'SYS:standard', ignore: 'pid,hostname' }
     } : undefined,

@@ -1,5 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config();
 import express from "express";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -9,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { logMiddleware } from "./middlewares/logMiddleware.js";
 import logger from "./utils/logger.js";
 import { connectRedis } from "./config/redis.js";
+import config from "./config/index.js";
 
 const app = express();
 app.use(logMiddleware);
@@ -51,10 +50,10 @@ app.use(errorMiddleware);
 
 // app.use("/user", userRoutes);
 await connectRedis();
-app.listen(process.env.PORT || 3000, () => {
+app.listen(config.app.port, () => {
   // console.log("server running on port 3000");
   logger.info({
-    port: process.env.PORT || 3000,
-    env: process.env.NODE_ENV,
+    port: config.app.port,
+    env: config.app.env,
   }, "Server started successfully");
 });
