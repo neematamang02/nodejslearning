@@ -33,6 +33,10 @@ const env = Object.freeze({
 
   EMAIL_USER: getRequired("EMAIL_USER"),
   EMAIL_PASS: getRequired("EMAIL_PASS"),
+
+  GOOGLE_CLIENT_ID: getRequired("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: getRequired("GOOGLE_CLIENT_SECRET"),
+  FRONTEND_URL: getOptional("FRONTEND_URL", "http://localhost:3000"),
 });
 
 export default env;

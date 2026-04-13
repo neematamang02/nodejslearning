@@ -8,11 +8,14 @@ import { logMiddleware } from "./middlewares/logMiddleware.js";
 import logger from "./utils/logger.js";
 import { connectRedis } from "./config/redis.js";
 import config from "./config/index.js";
+import passport from "passport";
+import "./config/passport.js";
 
 const app = express();
 app.use(logMiddleware);
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 connectDB();
 app.use("/user", userRoutes);
 app.use("/api", authRoutes);
