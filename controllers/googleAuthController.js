@@ -15,5 +15,9 @@ export const googleCallback = asyncHandler(async (req, res) => {
     });
 
     // Use URL fragment to avoid leaking access token via server logs/referrers.
-    res.redirect(`${config.oauth.frontendUrl}/oauth-success#token=${accessToken}`);
+    // res.redirect(`${config.oauth.frontendUrl}/oauth-success#token=${accessToken}`);
+    res.json({
+  success: true,
+  accessToken,
+});
 });
